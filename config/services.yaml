@@ -1,0 +1,22 @@
+parameters:
+    music_dir: '%env(MUSIC_DIR)%'
+
+services:
+    _defaults:
+        autowire: true
+        autoconfigure: true
+
+    App\:
+        resource: '../src/'
+        exclude:
+            - '../src/DependencyInjection/'
+            - '../src/Entity/'
+            - '../src/Kernel.php'
+
+    App\Service\MusicLibraryScanner:
+        arguments:
+            $musicDir: '%env(MUSIC_DIR)%'
+
+    App\Service\PlaylistFolderImporter:
+        arguments:
+            $musicDir: '%env(MUSIC_DIR)%'

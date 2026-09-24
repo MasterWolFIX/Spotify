@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rejestracja — MusicPlayer</title>
+    <link rel="stylesheet" href="{{ asset('css/app.css') }}">
+</head>
+<body>
+<div class="login-page">
+    <div class="login-card">
+        <div class="login-logo">
+            <div class="login-logo-text">MusicPlayer</div>
+            <div class="login-logo-subtitle">Lokalna biblioteka muzyczna</div>
+        </div>
+
+        <h1 class="login-title">Utwórz nowe konto</h1>
+
+        {% if error %}
+            <div class="form-error">{{ error }}</div>
+        {% endif %}
+
+        <form method="post" action="{{ path('app_register') }}" novalidate>
+            <div class="form-group">
+                <label class="form-label" for="email">Adres e-mail</label>
+                <input class="form-input" type="email" id="email" name="email"
+                       value="{{ last_email ?? '' }}"
+                       placeholder="twoj@email.com"
+                       autocomplete="email" autofocus required>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label" for="password">Hasło (min. 6 znaków)</label>
+                <input class="form-input" type="password" id="password" name="password"
+                       placeholder="••••••••"
+                       autocomplete="new-password" required>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label" for="password_confirm">Powtórz hasło</label>
+                <input class="form-input" type="password" id="password_confirm" name="password_confirm"
+                       placeholder="••••••••"
+                       autocomplete="new-password" required>
+            </div>
+
+            <button class="btn-login" type="submit">Zarejestruj konto</button>
+        </form>
+
+        <div class="login-footer" style="display:flex;flex-direction:column;gap:10px;margin-top:24px;">
+            <div>
+                Masz już konto? <a href="{{ path('app_login') }}" style="font-weight:700;color:var(--text-accent);">Zaloguj się</a>
+            </div>
+            <div>
+                <a href="{{ path('app_home') }}" style="color:var(--text-muted);font-size:0.82rem;">Kontynuuj bez logowania (tylko słuchanie) &rarr;</a>
+            </div>
+        </div>
+    </div>
+</div>
+</body>
+</html>

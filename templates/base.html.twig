@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}MusicPlayer{% endblock %}</title>
+    <link rel="stylesheet" href="{{ asset('css/app.css') }}">
+    {% block stylesheets %}{% endblock %}
+</head>
+<body>
+<div class="app-wrapper">
+
+    {# ── TOP BAR ─────────────────────────────────────────── #}
+    <header class="topbar">
+        <a href="{{ path('app_home') }}" class="topbar-logo">MusicPlayer</a>
+
+        <div class="topbar-search">
+            <form action="{{ path('app_songs_index') }}" method="get" role="search">
+                <div class="search-input-wrapper">
+                    <svg class="search-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                    </svg>
+                    <input class="search-input" type="search" name="q"
+                           placeholder="Szukaj utworów, wykonawców, albumów..."
+                           value="{{ app.request.query.get('q', '') }}">
+                </div>
+            </form>
+        </div>
+
+        <nav class="topbar-nav">
+            {% if app.user %}
+                <div style="display:flex;align-items:center;gap:10px">
+                    <span class="text-secondary" style="font-size:0.85rem;font-weight:600">{{ app.user.email }}</span>
+                    {% if is_granted('ROLE_ADMIN') %}
+                        <span class="admin-badge">Admin</span>
+                    {% endif %}
+                </div>
+                <a href="{{ path('app_logout') }}" class="btn btn-secondary btn-sm">Wyloguj</a>
+            {% else %}
+                <a href="{{ path('app_register') }}" class="btn btn-secondary btn-sm">Zarejestruj się</a>
+                <a href="{{ path('app_login') }}" class="btn btn-primary btn-sm">Zaloguj się</a>
+            {% endif %}
+        </nav>
+    </header>
+
+    {# ── CONTENT AREA ─────────────────────────────────────── #}
+    <div class="content-area">
+
+        {# Sidebar #}
+        <aside class="sidebar">
+            <div class="sidebar-section">
+                <div class="sidebar-section-title">Biblioteka</div>
+                <a href="{{ path('app_home') }}" class="sidebar-nav-item {% if app.request.get('_route') == 'app_home' or app.request.get('_route') == 'app_songs_index' %}active{% endif %}">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>
+                    </svg>
+                    <span>Wszystkie utwory</span>
+                </a>
+                <a href="{{ path('app_playlists_index') }}" class="sidebar-nav-item {% if app.request.get('_route') starts with 'app_playlists' %}active{% endif %}">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/>
+                        <line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/>
+                    </svg>
+                    <span>Playlisty</span>
+                </a>
+            </div>
+
+            {% if is_granted('ROLE_ADMIN') %}
+            <div class="sidebar-section">
+                <div class="sidebar-section-title">Zarządzanie</div>
+                <button class="sidebar-nav-item btn-scan" data-action="scan" style="width:100%;text-align:left;background:none;border:none;cursor:pointer;">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/>
+                        <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+                    </svg>
+                    <span>Skanuj bibliotekę</span>
+                </button>
+                <button class="sidebar-nav-item btn-upload" data-action="upload" style="width:100%;text-align:left;background:none;border:none;cursor:pointer;">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/>
+                        <path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/>
+                    </svg>
+                    <span>Wgraj plik MP3</span>
+                </button>
+            </div>
+            {% endif %}
+
+            {# Dynamic User Playlists in Sidebar #}
+            <div class="sidebar-section" id="sidebar-playlists-section" style="flex:1;display:flex;flex-direction:column;">
+                <div style="display:flex;align-items:center;justify-content:space-between;padding-right:8px;margin-bottom:8px;">
+                    <div class="sidebar-section-title" style="margin-bottom:0">Twoje playlisty</div>
+                    {% if app.user %}
+                    <button class="btn-ghost btn-sm" id="btn-sidebar-new-playlist" title="Nowa playlista" style="padding:2px 6px;color:var(--text-accent);font-size:1.1rem;font-weight:700;line-height:1;">
+                        +
+                    </button>
+                    {% endif %}
+                </div>
+                <div id="sidebar-playlists-list" style="display:flex;flex-direction:column;gap:2px;overflow-y:auto;max-height:280px;">
+                    {# Populated dynamically by JS or static fallback #}
+                    {% if playlists is defined and playlists|length > 0 %}
+                        {% for playlist in playlists %}
+                        <a href="{{ path('app_playlists_show', {id: playlist.id}) }}"
+                           class="sidebar-playlist-item {% if app.request.get('id') == playlist.id %}active{% endif %}"
+                           data-sidebar-playlist-id="{{ playlist.id }}">
+                            <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ playlist.name }}</span>
+                            <span class="sidebar-playlist-count">{{ playlist.getSongCount() }}</span>
+                        </a>
+                        {% endfor %}
+                    {% endif %}
+                </div>
+            </div>
+        </aside>
+
+        {# Main content #}
+        <main class="main-view" id="main-view">
+            {% block body %}{% endblock %}
+        </main>
+    </div>
+
+    {# ── PLAYER BAR ────────────────────────────────────────── #}
+    <div class="player-bar">
+        {# Track info #}
+        <div class="player-track">
+            <div style="width:44px;height:44px;border-radius:var(--radius-sm);background:var(--accent-gradient);display:flex;align-items:center;justify-content:center;color:#fff;flex-shrink:0;">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/>
+                </svg>
+            </div>
+            <div class="player-track-info">
+                <div class="player-track-title" id="player-title">Nie wybrano utworu</div>
+                <div class="player-track-artist" id="player-artist">Wybierz utwór z listy</div>
+            </div>
+        </div>
+
+        {# Controls #}
+        <div class="player-controls">
+            <div class="player-buttons">
+                <button class="btn-control" id="btn-shuffle" title="Odtwarzanie losowe">
+                    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/>
+                        <polyline points="21 16 21 21 16 21"/><line x1="15" y1="15" x2="21" y2="21"/>
+                        <line x1="4" y1="4" x2="9" y2="9"/>
+                    </svg>
+                </button>
+                <button class="btn-control" id="btn-prev" title="Poprzedni utwór">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M6 6h2v12H6zm3.5 6 8.5 6V6z"/>
+                    </svg>
+                </button>
+                <button class="btn-play-pause" id="btn-play-pause" title="Odtwórz / Wstrzymaj">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="white">
+                        <path class="icon-play-pause" d="M8 5v14l11-7L8 5z"/>
+                    </svg>
+                </button>
+                <button class="btn-control" id="btn-next" title="Następny utwór">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M6 18l8.5-6L6 6v12zm2.5-6 5.5 4V8l-5.5 4zm7.5-6h2v12h-2z"/>
+                    </svg>
+                </button>
+                <button class="btn-control" id="btn-repeat" title="Powtarzanie: wyłączone" style="position:relative;">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/>
+                        <polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/>
+                    </svg>
+                    <span class="repeat-badge-one hidden" id="repeat-badge-1">1</span>
+                </button>
+            </div>
+
+            <div class="player-progress">
+                <span class="player-time" id="time-current">0:00</span>
+                <div class="progress-track" id="progress-track">
+                    <div class="progress-fill" id="progress-fill" style="width:0%"></div>
+                    <div class="progress-thumb" id="progress-thumb" style="left:0%"></div>
+                </div>
+                <span class="player-time time-right" id="time-duration">0:00</span>
+            </div>
+        </div>
+
+        {# Volume with 200% scaling and clear percentage #}
+        <div class="player-volume">
+            <button class="btn-control" id="btn-mute" title="Wycisz">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
+                    <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/>
+                </svg>
+            </button>
+            <div style="display:flex;align-items:center;gap:8px;flex:1;">
+                <input class="volume-slider" type="range" id="volume-slider" min="0" max="2" step="0.01" value="1" title="0% do 200% (Środek = 100%)">
+                <span class="volume-label" id="volume-label" title="Poziom głośności (100% = środek, do 200% wzmocnienie)">100%</span>
+            </div>
+        </div>
+    </div>
+
+</div><!-- .app-wrapper -->
+
+{# Hidden file input for upload #}
+<input type="file" id="upload-input" accept=".mp3,audio/mpeg" multiple style="display:none">
+
+{# Global New Playlist Modal #}
+<div class="modal-overlay" id="modal-global-playlist">
+    <div class="modal">
+        <div class="modal-title">Utwórz nową playlistę</div>
+        <div class="form-group">
+            <label class="form-label" for="global-playlist-name-input">Nazwa playlisty</label>
+            <input class="form-input" type="text" id="global-playlist-name-input" placeholder="Np. Moje ulubione, Rock Classics...">
+        </div>
+        <div class="modal-actions">
+            <button class="btn btn-secondary" id="btn-cancel-global-playlist">Anuluj</button>
+            <button class="btn btn-primary" id="btn-confirm-global-playlist">Utwórz playlistę</button>
+        </div>
+    </div>
+</div>
+
+{# Global Add to Playlist Modal #}
+<div class="modal-overlay" id="modal-add-to-playlist">
+    <div class="modal">
+        <div class="modal-title">Dodaj do playlisty</div>
+        <div id="add-to-playlist-options" style="display:flex;flex-direction:column;gap:8px;max-height:220px;overflow-y:auto;margin-bottom:16px;">
+            <p class="text-muted" style="font-size:0.85rem">Ładowanie playlist...</p>
+        </div>
+        <div class="modal-actions">
+            <button class="btn btn-secondary" id="btn-cancel-add-to-playlist">Zamknij</button>
+        </div>
+    </div>
+</div>
+
+<div class="toast-container"></div>
+
+<script src="{{ asset('js/player.js') }}"></script>
+<script src="{{ asset('js/library.js') }}"></script>
+<script>
+// Sidebar & Global Playlist manager
+async function refreshSidebarPlaylists() {
+    try {
+        const resp = await fetch('/playlists/data');
+        if (!resp.ok) return;
+        const playlists = await resp.json();
+        const container = document.querySelector('#sidebar-playlists-list');
+        if (!container) return;
+        
+        container.innerHTML = '';
+        if (!playlists.length) {
+            container.innerHTML = '<span class="text-muted" style="font-size:0.8rem;padding:6px 12px">Brak playlist</span>';
+            return;
+        }
+
+        const currentPath = window.location.pathname;
+        playlists.forEach(p => {
+            const isActive = currentPath === `/playlists/${p.id}`;
+            const item = document.createElement('a');
+            item.href = p.url || `/playlists/${p.id}`;
+            item.className = `sidebar-playlist-item ${isActive ? 'active' : ''}`;
+            item.dataset.sidebarPlaylistId = p.id;
+            item.innerHTML = `
+                <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escHtml(p.name)}</span>
+                <span class="sidebar-playlist-count">${p.songCount || 0}</span>
+            `;
+            container.appendChild(item);
+        });
+    } catch(e) {}
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    refreshSidebarPlaylists();
+
+    // Open new playlist modal from sidebar "+"
+    document.querySelector('#btn-sidebar-new-playlist')?.addEventListener('click', () => {
+        const modal = document.querySelector('#modal-global-playlist');
+        modal?.classList.add('open');
+        document.querySelector('#global-playlist-name-input')?.focus();
+    });
+
+    document.querySelector('#btn-cancel-global-playlist')?.addEventListener('click', () => {
+        document.querySelector('#modal-global-playlist')?.classList.remove('open');
+    });
+
+    document.querySelector('#btn-confirm-global-playlist')?.addEventListener('click', async () => {
+        const input = document.querySelector('#global-playlist-name-input');
+        const name = input?.value.trim();
+        if (!name) return;
+
+        try {
+            const resp = await fetch('/playlists', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name })
+            });
+            const data = await resp.json();
+            if (resp.ok) {
+                input.value = '';
+                document.querySelector('#modal-global-playlist')?.classList.remove('open');
+                showToast(`Utworzono playlistę "${name}"!`, 'success');
+                refreshSidebarPlaylists();
+                if (window.location.pathname.startsWith('/playlists')) {
+                    setTimeout(() => location.reload(), 600);
+                }
+            } else {
+                showToast(data.error || 'Błąd tworzenia playlisty.', 'error');
+            }
+        } catch(err) {
+            showToast('Błąd połączenia z serwerem.', 'error');
+        }
+    });
+
+    // Add to playlist modal logic
+    document.addEventListener('click', async (e) => {
+        const btn = e.target.closest('[data-add-to-playlist]');
+        if (!btn) return;
+        e.preventDefault();
+        e.stopPropagation();
+
+        const songId = parseInt(btn.dataset.addToPlaylist);
+        const modal = document.querySelector('#modal-add-to-playlist');
+        const optionsContainer = document.querySelector('#add-to-playlist-options');
+        modal?.classList.add('open');
+        optionsContainer.innerHTML = '<p class="text-muted" style="font-size:0.85rem">Ładowanie playlist...</p>';
+
+        try {
+            const resp = await fetch('/playlists/data');
+            const playlists = await resp.json();
+            optionsContainer.innerHTML = '';
+            if (!playlists.length) {
+                optionsContainer.innerHTML = '<p class="text-muted" style="font-size:0.85rem">Brak playlist. Utwórz najpierw playlistę w menu bocznym.</p>';
+                return;
+            }
+
+            playlists.forEach(p => {
+                const btnItem = document.createElement('button');
+                btnItem.className = 'btn btn-secondary';
+                btnItem.style.width = '100%';
+                btnItem.style.justifyContent = 'space-between';
+                btnItem.innerHTML = `<span>${escHtml(p.name)}</span> <span class="text-muted" style="font-size:0.75rem">${p.songCount || 0} utworów</span>`;
+                btnItem.addEventListener('click', async () => {
+                    const addResp = await fetch(`/playlists/${p.id}/songs`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ songId })
+                    });
+                    const addData = await addResp.json();
+                    if (addResp.ok) {
+                        showToast(`Dodano utwór do "${p.name}"!`, 'success');
+                        modal?.classList.remove('open');
+                        refreshSidebarPlaylists();
+                    } else {
+                        showToast(addData.error || 'Utwór już znajduje się na tej playliście.', 'error');
+                    }
+                });
+                optionsContainer.appendChild(btnItem);
+            });
+        } catch(e) {
+            optionsContainer.innerHTML = '<p class="text-danger" style="font-size:0.85rem">Błąd pobierania playlist.</p>';
+        }
+    });
+
+    document.querySelector('#btn-cancel-add-to-playlist')?.addEventListener('click', () => {
+        document.querySelector('#modal-add-to-playlist')?.classList.remove('open');
+    });
+});
+</script>
+{% block javascripts %}{% endblock %}
+</body>
+</html>

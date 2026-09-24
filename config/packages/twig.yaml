@@ -1,0 +1,4 @@
+twig:
+    file_name_pattern: '*.twig'
+    globals:
+        music_dir: '%env(MUSIC_DIR)%'

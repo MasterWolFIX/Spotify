@@ -1,0 +1,14 @@
+﻿# Force LF line endings for all files
+* text=auto eol=lf
+
+# Binary files - no conversion
+*.mp3 binary
+*.png binary
+*.jpg binary
+*.gif binary
+*.ico binary
+*.woff binary
+*.woff2 binary
+
+# PHP executable - must have LF
+bin/console text eol=lf
