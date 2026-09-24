@@ -184,6 +184,58 @@ class PlaylistController extends AbstractController
         return $this->json(['success' => true]);
     }
 
+    #[Route('/{id}/cover', name: 'app_playlists_cover', methods: ['POST'], requirements: ['id' => '\d+'])]
+    #[IsGranted('ROLE_USER')]
+    public function uploadCover(Playlist $playlist, Request $request): JsonResponse
+    {
+        try {
+            $user = $this->getUser();
+            $isAdmin = $this->isGranted('ROLE_ADMIN');
+            $isOwner = $playlist->getCreatedBy() === $user;
+
+            if (!$isAdmin && !$isOwner) {
+                return $this->json(['error' => 'Access denied.'], Response::HTTP_FORBIDDEN);
+            }
+
+            /** @var \Symfony\Component\HttpFoundation\File\UploadedFile|null $file */
+            $file = $request->files->get('cover');
+            if ($file) {
+                if (!$file->isValid()) {
+                    return $this->json(['error' => 'Upload error: ' . $file->getErrorMessage()], Response::HTTP_BAD_REQUEST);
+                }
+
+                $uploadDir = $this->getParameter('kernel.project_dir') . '/public/uploads/playlists';
+                if (!file_exists($uploadDir)) {
+                    mkdir($uploadDir, 0777, true);
+                }
+                
+                $extension = $file->guessExtension();
+                if (!$extension) {
+                    $extension = $file->getClientOriginalExtension() ?: 'png';
+                }
+                
+                $filename = uniqid() . '.' . $extension;
+                $file->move($uploadDir, $filename);
+                
+                if ($playlist->getImagePath()) {
+                    $oldPath = $uploadDir . '/' . $playlist->getImagePath();
+                    if (file_exists($oldPath) && is_file($oldPath)) {
+                        unlink($oldPath);
+                    }
+                }
+
+                $playlist->setImagePath($filename);
+                $this->em->flush();
+
+                return $this->json(['success' => true, 'imagePath' => $filename]);
+            }
+
+            return $this->json(['error' => 'No file uploaded.'], Response::HTTP_BAD_REQUEST);
+        } catch (\Throwable $e) {
+            return $this->json(['error' => $e->getMessage(), 'trace' => $e->getTraceAsString()], 500);
+        }
+    }
+
     private function playlistToArray(Playlist $playlist): array
     {
         return [
@@ -192,6 +244,7 @@ class PlaylistController extends AbstractController
             'songCount' => $playlist->getSongCount(),
             'createdAt' => $playlist->getCreatedAt()?->format('Y-m-d'),
             'url' => $this->generateUrl('app_playlists_show', ['id' => $playlist->getId()]),
+            'imagePath' => $playlist->getImagePath(),
         ];
     }
 }

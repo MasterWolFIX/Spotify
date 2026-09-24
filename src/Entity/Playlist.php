@@ -30,6 +30,9 @@ class Playlist
     #[ORM\OrderBy(['position' => 'ASC'])]
     private Collection $playlistSongs;
 
+    #[ORM\Column(length: 255, nullable: true)]
+    private ?string $imagePath = null;
+
     public function __construct()
     {
         $this->createdAt = new \DateTimeImmutable();
@@ -75,6 +78,18 @@ class Playlist
     public function removePlaylistSong(PlaylistSong $playlistSong): static
     {
         $this->playlistSongs->removeElement($playlistSong);
+        return $this;
+    }
+
+    public function getImagePath(): ?string
+    {
+        return $this->imagePath;
+    }
+
+    public function setImagePath(?string $imagePath): static
+    {
+        $this->imagePath = $imagePath;
+
         return $this;
     }
 }

@@ -49,7 +49,7 @@
                 <th>Title</th>
                 <th>Artist</th>
                 <th>Album</th>
-                <th class="col-duration" title="Duration">Time</th>
+                <th class="col-duration">Time</th>
                 <th class="col-actions"></th>
             </tr>
         </thead>
@@ -59,7 +59,7 @@
                 aria-label="{{ song.getDisplayName() }}">
                 <td class="col-num">
                     <span class="row-num">{{ loop.index }}</span>
-                    <svg class="playing-indicator" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg" aria-label="Now playing">
+                    <svg class="playing-indicator" viewBox="0 0 24 24" fill="currentColor" aria-label="Now playing">
                         <rect x="2" y="10" width="4" height="10" rx="1"><animate attributeName="height" values="10;4;10" dur="1s" repeatCount="indefinite"/><animate attributeName="y" values="10;14;10" dur="1s" repeatCount="indefinite"/></rect>
                         <rect x="10" y="6" width="4" height="14" rx="1"><animate attributeName="height" values="14;6;14" dur="0.8s" repeatCount="indefinite"/><animate attributeName="y" values="6;10;6" dur="0.8s" repeatCount="indefinite"/></rect>
                         <rect x="18" y="8" width="4" height="12" rx="1"><animate attributeName="height" values="12;5;12" dur="1.2s" repeatCount="indefinite"/><animate attributeName="y" values="8;12;8" dur="1.2s" repeatCount="indefinite"/></rect>
@@ -95,7 +95,6 @@
     </table>
 {% endif %}
 
-{# Pass song data to JavaScript #}
 <script>
 window._songQueue = {{ songs|map(s => {
     'id': s.id,

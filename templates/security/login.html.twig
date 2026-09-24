@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="pl">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Zaloguj się — MusicPlayer</title>
+    <title>Log In — MusicPlayer</title>
     <link rel="stylesheet" href="{{ asset('css/app.css') }}">
 </head>
 <body>
@@ -11,10 +11,10 @@
     <div class="login-card">
         <div class="login-logo">
             <div class="login-logo-text">MusicPlayer</div>
-            <div class="login-logo-subtitle">Lokalna biblioteka muzyczna</div>
+            <div class="login-logo-subtitle">Your personal music library</div>
         </div>
 
-        <h1 class="login-title">Logowanie</h1>
+        <h1 class="login-title">Welcome back</h1>
 
         {% for message in app.flashes('success') %}
             <div style="background:rgba(16,185,129,0.15);border:1px solid rgba(16,185,129,0.4);border-radius:var(--radius-md);color:#6ee7b7;padding:12px 16px;font-size:0.88rem;margin-bottom:20px;text-align:center;">
@@ -30,29 +30,29 @@
             <input type="hidden" name="_csrf_token" value="{{ csrf_token('authenticate') }}">
 
             <div class="form-group">
-                <label class="form-label" for="email">Adres e-mail</label>
+                <label class="form-label" for="email">Email address</label>
                 <input class="form-input" type="email" id="email" name="_email"
                        value="{{ last_username }}"
-                       placeholder="twoj@email.com"
+                       placeholder="your@email.com"
                        autocomplete="email" autofocus required>
             </div>
 
             <div class="form-group">
-                <label class="form-label" for="password">Hasło</label>
+                <label class="form-label" for="password">Password</label>
                 <input class="form-input" type="password" id="password" name="_password"
                        placeholder="••••••••"
                        autocomplete="current-password" required>
             </div>
 
-            <button class="btn-login" type="submit">Zaloguj się</button>
+            <button class="btn-login" type="submit">Log In</button>
         </form>
 
         <div class="login-footer" style="display:flex;flex-direction:column;gap:10px;margin-top:24px;">
             <div>
-                Nie masz jeszcze konta? <a href="{{ path('app_register') }}" style="font-weight:700;color:var(--text-accent);">Zarejestruj się</a>
+                Don't have an account? <a href="{{ path('app_register') }}" style="font-weight:700;color:var(--text-accent);">Sign up</a>
             </div>
             <div>
-                <a href="{{ path('app_home') }}" style="color:var(--text-muted);font-size:0.82rem;">Kontynuuj bez logowania (tylko słuchanie) &rarr;</a>
+                <a href="{{ path('app_home') }}" style="color:var(--text-muted);font-size:0.82rem;">Continue without logging in (listen only) &rarr;</a>
             </div>
         </div>
     </div>

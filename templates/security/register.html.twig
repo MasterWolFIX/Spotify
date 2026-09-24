@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="pl">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Rejestracja — MusicPlayer</title>
+    <title>Sign Up — MusicPlayer</title>
     <link rel="stylesheet" href="{{ asset('css/app.css') }}">
 </head>
 <body>
@@ -11,10 +11,10 @@
     <div class="login-card">
         <div class="login-logo">
             <div class="login-logo-text">MusicPlayer</div>
-            <div class="login-logo-subtitle">Lokalna biblioteka muzyczna</div>
+            <div class="login-logo-subtitle">Your personal music library</div>
         </div>
 
-        <h1 class="login-title">Utwórz nowe konto</h1>
+        <h1 class="login-title">Create an account</h1>
 
         {% if error %}
             <div class="form-error">{{ error }}</div>
@@ -22,36 +22,36 @@
 
         <form method="post" action="{{ path('app_register') }}" novalidate>
             <div class="form-group">
-                <label class="form-label" for="email">Adres e-mail</label>
+                <label class="form-label" for="email">Email address</label>
                 <input class="form-input" type="email" id="email" name="email"
                        value="{{ last_email ?? '' }}"
-                       placeholder="twoj@email.com"
+                       placeholder="your@email.com"
                        autocomplete="email" autofocus required>
             </div>
 
             <div class="form-group">
-                <label class="form-label" for="password">Hasło (min. 6 znaków)</label>
+                <label class="form-label" for="password">Password (min. 6 chars)</label>
                 <input class="form-input" type="password" id="password" name="password"
                        placeholder="••••••••"
                        autocomplete="new-password" required>
             </div>
 
             <div class="form-group">
-                <label class="form-label" for="password_confirm">Powtórz hasło</label>
+                <label class="form-label" for="password_confirm">Confirm password</label>
                 <input class="form-input" type="password" id="password_confirm" name="password_confirm"
                        placeholder="••••••••"
                        autocomplete="new-password" required>
             </div>
 
-            <button class="btn-login" type="submit">Zarejestruj konto</button>
+            <button class="btn-login" type="submit">Sign Up</button>
         </form>
 
         <div class="login-footer" style="display:flex;flex-direction:column;gap:10px;margin-top:24px;">
             <div>
-                Masz już konto? <a href="{{ path('app_login') }}" style="font-weight:700;color:var(--text-accent);">Zaloguj się</a>
+                Already have an account? <a href="{{ path('app_login') }}" style="font-weight:700;color:var(--text-accent);">Log in</a>
             </div>
             <div>
-                <a href="{{ path('app_home') }}" style="color:var(--text-muted);font-size:0.82rem;">Kontynuuj bez logowania (tylko słuchanie) &rarr;</a>
+                <a href="{{ path('app_home') }}" style="color:var(--text-muted);font-size:0.82rem;">Continue without logging in (listen only) &rarr;</a>
             </div>
         </div>
     </div>
