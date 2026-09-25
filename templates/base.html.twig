@@ -95,16 +95,16 @@
         {# Mini top bar inside main #}
         <header class="main-topbar">
             <div class="main-search">
-                <form action="{{ path('app_songs_index') }}" method="get" role="search">
-                    <div class="search-input-wrapper">
-                        <svg class="search-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
-                        </svg>
-                        <input class="search-input" type="search" name="q"
-                               placeholder="Search songs, artists, albums..."
-                               value="{{ app.request.query.get('q', '') }}">
-                    </div>
-                </form>
+                <div class="search-input-wrapper">
+                    <svg class="search-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                    </svg>
+                    <input class="search-input" type="text" id="live-search-input"
+                           placeholder="Search songs, artists, albums..."
+                           value="{{ app.request.query.get('q', '') }}"
+                           autocomplete="off">
+                    <span class="search-spinner hidden" id="search-spinner"></span>
+                </div>
             </div>
         </header>
 
@@ -329,6 +329,136 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 });
 </script>
+
+<script>
+/* ── LIVE SEARCH ─────────────────────────────────────────── */
+(function () {
+    const input   = document.getElementById('live-search-input');
+    const spinner = document.getElementById('search-spinner');
+    const SONGS_URL = '/songs';
+    let debounceTimer = null;
+    let lastQuery = input ? input.value.trim() : '';
+    const isLibraryPage = () => window.location.pathname === '/' || window.location.pathname.startsWith('/songs');
+
+    function renderSongsTable(songs) {
+        const main = document.getElementById('main-view');
+        if (!main) return;
+
+        if (songs.length === 0) {
+            main.innerHTML = `
+                <div class="page-header">
+                    <div><h1 class="page-title">Search results</h1>
+                    <div class="page-subtitle">0 songs found</div></div>
+                </div>
+                <div style="text-align:center;padding:80px 20px;color:var(--text-muted)">
+                    <p style="font-size:1.1rem">No songs matching your query.</p>
+                </div>`;
+            window._songQueue = [];
+            return;
+        }
+
+        let rows = '';
+        songs.forEach((s, i) => {
+            const dur = s.formattedDuration || '';
+            rows += `<tr data-song-id="${s.id}" role="row" tabindex="0">
+                <td class="col-num"><span class="row-num">${i+1}</span>
+                    <svg class="playing-indicator" viewBox="0 0 24 24" fill="currentColor">
+                        <rect x="2" y="10" width="4" height="10" rx="1"><animate attributeName="height" values="10;4;10" dur="1s" repeatCount="indefinite"/><animate attributeName="y" values="10;14;10" dur="1s" repeatCount="indefinite"/></rect>
+                        <rect x="10" y="6" width="4" height="14" rx="1"><animate attributeName="height" values="14;6;14" dur="0.8s" repeatCount="indefinite"/><animate attributeName="y" values="6;10;6" dur="0.8s" repeatCount="indefinite"/></rect>
+                        <rect x="18" y="8" width="4" height="12" rx="1"><animate attributeName="height" values="12;5;12" dur="1.2s" repeatCount="indefinite"/><animate attributeName="y" values="8;12;8" dur="1.2s" repeatCount="indefinite"/></rect>
+                    </svg></td>
+                <td class="col-title">${escHtml(s.title)}</td>
+                <td>${escHtml(s.artist || '')}</td>
+                <td>${escHtml(s.album || '')}</td>
+                <td class="col-duration">${dur}</td>
+                <td class="col-actions">
+                    <button class="btn btn-ghost btn-sm btn-icon btn-action" data-add-to-playlist="${s.id}" title="Add to playlist">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                    </button>
+                </td>
+            </tr>`;
+        });
+
+        main.innerHTML = `
+            <div class="page-header">
+                <div><h1 class="page-title">Search results</h1>
+                <div class="page-subtitle">${songs.length} song${songs.length !== 1 ? 's' : ''} found</div></div>
+            </div>
+            <table class="song-table" role="grid">
+                <thead><tr>
+                    <th class="col-num">#</th>
+                    <th>Title</th><th>Artist</th><th>Album</th>
+                    <th class="col-duration">Time</th>
+                    <th class="col-actions"></th>
+                </tr></thead>
+                <tbody id="songs-tbody">${rows}</tbody>
+            </table>`;
+
+        window._songQueue = songs.map(s => ({
+            id: s.id, title: s.title, artist: s.artist, album: s.album,
+            duration: s.duration, streamUrl: s.streamUrl
+        }));
+        if (window.player) window.player.setQueue(window._songQueue, null);
+    }
+
+    async function doSearch(q) {
+        if (spinner) spinner.classList.remove('hidden');
+        try {
+            const resp = await fetch(`${SONGS_URL}?q=${encodeURIComponent(q)}`, {
+                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            });
+            if (!resp.ok) return;
+            const songs = await resp.json();
+            renderSongsTable(songs);
+        } catch(e) {
+            /* silently ignore */
+        } finally {
+            if (spinner) spinner.classList.add('hidden');
+        }
+    }
+
+    async function resetToAllSongs() {
+        if (spinner) spinner.classList.remove('hidden');
+        try {
+            const resp = await fetch(`${SONGS_URL}`, {
+                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            });
+            if (!resp.ok) return;
+            const songs = await resp.json();
+            renderSongsTable(songs);
+        } catch(e) {}
+        finally { if (spinner) spinner.classList.add('hidden'); }
+    }
+
+    if (input) {
+        input.addEventListener('input', () => {
+            clearTimeout(debounceTimer);
+            const q = input.value.trim();
+
+            /* If we're not on library page, navigate there first */
+            if (!isLibraryPage()) {
+                window.location.href = `/?q=${encodeURIComponent(q)}`;
+                return;
+            }
+
+            debounceTimer = setTimeout(() => {
+                if (q === lastQuery) return;
+                lastQuery = q;
+                if (q.length === 0) {
+                    resetToAllSongs();
+                } else if (q.length >= 1) {
+                    doSearch(q);
+                }
+            }, 280);
+        });
+
+        input.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') { e.preventDefault(); }
+        });
+    }
+})();
+</script>
+
 {% block javascripts %}{% endblock %}
 </body>
 </html>

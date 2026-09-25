@@ -35,13 +35,14 @@ class SongController extends AbstractController
             $songs = $this->songRepository->findAllOrderedByArtist();
         }
 
-        if ($request->isXmlHttpRequest()) {
+        if ($request->isXmlHttpRequest() || $request->query->getBoolean('json')) {
             return $this->json(array_map($this->songToArray(...), $songs));
         }
 
-        return $this->render('songs/index.html.twig', [
-            'songs' => $songs,
-            'search' => $search,
+        return $this->render('main/index.html.twig', [
+            'songs'     => $songs,
+            'songCount' => count($songs),
+            'search'    => $search,
         ]);
     }
 

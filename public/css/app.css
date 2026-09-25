@@ -746,11 +746,31 @@ input, select, textarea { font-family: inherit; }
     transition: var(--transition);
 }
 .search-input::placeholder { color: var(--text-muted); }
+.search-input::-webkit-search-cancel-button,
+.search-input::-webkit-search-decoration,
+.search-input::-ms-clear { display: none; -webkit-appearance: none; }
 .search-input:focus {
     border-color: var(--accent);
     background: rgba(255,255,255,0.07);
     box-shadow: 0 0 0 3px rgba(139,92,246,0.2);
 }
+
+.search-input {
+    padding-right: 38px; /* room for spinner */
+}
+
+.search-spinner {
+    position: absolute;
+    right: 13px;
+    width: 16px;
+    height: 16px;
+    border: 2px solid rgba(139,92,246,0.25);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    pointer-events: none;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
 
 /* ============================================================
    PLAYLIST CARDS
