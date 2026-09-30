@@ -36,7 +36,7 @@
 {% else %}
     <div class="card-grid" id="playlist-grid">
         {% for playlist in playlists %}
-        <div class="card playlist-card" style="position:relative;display:flex;flex-direction:column;justify-content:space-between;cursor:pointer;" onclick="window.location.href='{{ path('app_playlists_show', {id: playlist.id}) }}'">
+        <a class="card playlist-card" href="{{ path('app_playlists_show', {id: playlist.id}) }}" style="position:relative;display:flex;flex-direction:column;justify-content:space-between;cursor:pointer;text-decoration:none;">
             <div>
                 <div class="card-icon" style="border-radius:var(--radius-md);margin-bottom:14px;background:linear-gradient(135deg,rgba(139,92,246,0.3) 0%,rgba(109,40,217,0.6) 100%);display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;">
                     {% if playlist.imagePath %}
@@ -56,7 +56,7 @@
                 <div class="card-meta">{{ playlist.getSongCount() }} song{{ playlist.getSongCount() != 1 ? 's' : '' }}</div>
                 <span style="font-size:0.75rem;font-weight:700;color:var(--text-accent);">Open &rarr;</span>
             </div>
-        </div>
+        </a>
         {% endfor %}
     </div>
 {% endif %}

@@ -261,6 +261,16 @@ document.addEventListener('DOMContentLoaded', () => {
         document.querySelector('#modal-global-playlist')?.classList.remove('open');
     });
 
+    document.querySelector('#global-playlist-name-input')?.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            document.querySelector('#btn-confirm-global-playlist')?.click();
+        }
+        if (e.key === 'Escape') {
+            document.querySelector('#btn-cancel-global-playlist')?.click();
+        }
+    });
+
     document.querySelector('#btn-confirm-global-playlist')?.addEventListener('click', async () => {
         const input = document.querySelector('#global-playlist-name-input');
         const btn = document.querySelector('#btn-confirm-global-playlist');
@@ -281,7 +291,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 document.querySelector('#modal-global-playlist')?.classList.remove('open');
                 showToast(`Playlist "${name}" created!`, 'success');
                 refreshSidebarPlaylists();
-                if (window.location.pathname.startsWith('/playlists')) setTimeout(() => location.reload(), 600);
+                if (window.location.pathname.startsWith('/playlists')) setTimeout(() => window.navigateTo ? window.navigateTo(location.href, false) : location.reload(), 400);
             } else {
                 showToast(data.error || 'Failed to create playlist.', 'error');
             }
@@ -481,8 +491,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const mainView = document.getElementById('main-view');
     if (!mainView) return;
 
-    /* Selectors of links that should use SPA navigation */
-    const NAV_SELECTOR = '.sidebar-link, .sidebar-playlist-item, [data-spa-link]';
 
     /* Pages that have page-specific <script> blocks we need to re-run */
     function runInlineScripts(container) {
@@ -554,12 +562,24 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    /* Intercept clicks on nav links */
+    /* Expose globally so inline scripts in templates can use it */
+    window.navigateTo = navigateTo;
+
+    /* Intercept ALL internal <a> link clicks */
     document.addEventListener('click', (e) => {
-        const link = e.target.closest(NAV_SELECTOR);
+        const link = e.target.closest('a[href]');
         if (!link) return;
         const href = link.getAttribute('href');
-        if (!href || href.startsWith('#') || href.startsWith('http') || e.ctrlKey || e.metaKey || e.shiftKey) return;
+        /* Skip: external, hash-only, special protocols, open-in-new-tab, forced full-nav */
+        if (!href
+            || href.startsWith('#')
+            || href.startsWith('http')
+            || href.startsWith('mailto:')
+            || href.startsWith('tel:')
+            || href.startsWith('javascript:')
+            || link.target === '_blank'
+            || link.hasAttribute('data-no-spa')
+            || e.ctrlKey || e.metaKey || e.shiftKey) return;
         e.preventDefault();
         navigateTo(href);
     });

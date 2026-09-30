@@ -165,7 +165,7 @@ function initLibrary() {
                 const result = await scanLibrary();
                 showToast(result.message, 'success');
                 if (result.added > 0) {
-                    setTimeout(() => location.reload(), 1500);
+                    setTimeout(() => window.navigateTo ? window.navigateTo(location.href, false) : location.reload(), 1500);
                 }
             } catch (err) {
                 showToast(err.message, 'error');
@@ -224,7 +224,7 @@ if (document.readyState === 'loading') {
 function addSongRow(song) {
     const tbody = document.querySelector('#songs-tbody');
     if (!tbody) {
-        setTimeout(() => location.reload(), 1200);
+        setTimeout(() => window.navigateTo ? window.navigateTo(location.href, false) : location.reload(), 1200);
         return;
     }
 

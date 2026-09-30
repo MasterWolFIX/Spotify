@@ -126,7 +126,7 @@ document.querySelector('#btn-delete-playlist')?.addEventListener('click', async 
         const resp = await fetch(`/playlists/${_playlistId}`, { method: 'DELETE' });
         if (resp.ok) {
             showToast('Playlist deleted.', 'success');
-            setTimeout(() => window.location.href = '/playlists', 400);
+            setTimeout(() => window.navigateTo ? window.navigateTo('/playlists') : (window.location.href = '/playlists'), 400);
         } else {
             showToast('Failed to delete playlist.', 'error');
         }
@@ -197,7 +197,8 @@ else initSortable();
             });
             const data = await resp.json();
             if (resp.ok && data.success) {
-                location.reload();
+                if (window.navigateTo) window.navigateTo(location.href, false);
+                else location.reload();
             } else {
                 showToast(data.error || 'Failed to upload cover.', 'error');
             }
