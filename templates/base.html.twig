@@ -263,8 +263,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
     document.querySelector('#btn-confirm-global-playlist')?.addEventListener('click', async () => {
         const input = document.querySelector('#global-playlist-name-input');
+        const btn = document.querySelector('#btn-confirm-global-playlist');
         const name = input?.value.trim();
         if (!name) return;
+        if (btn.disabled) return;
+        btn.disabled = true;
+        btn.textContent = 'Creating…';
         try {
             const resp = await fetch('/playlists', {
                 method: 'POST',
@@ -283,6 +287,9 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         } catch(err) {
             showToast('Connection error.', 'error');
+        } finally {
+            btn.disabled = false;
+            btn.textContent = 'Create';
         }
     });
 
@@ -444,18 +451,13 @@ document.addEventListener('DOMContentLoaded', () => {
             clearTimeout(debounceTimer);
             const q = input.value.trim();
 
-            /* If we're not on library page, navigate there first */
-            if (!isLibraryPage()) {
-                window.location.href = `/?q=${encodeURIComponent(q)}`;
-                return;
-            }
+            if (q === lastQuery) return;
+            lastQuery = q;
 
             debounceTimer = setTimeout(() => {
-                if (q === lastQuery) return;
-                lastQuery = q;
                 if (q.length === 0) {
                     resetToAllSongs();
-                } else if (q.length >= 1) {
+                } else {
                     doSearch(q);
                 }
             }, 280);
@@ -464,7 +466,112 @@ document.addEventListener('DOMContentLoaded', () => {
         input.addEventListener('keydown', (e) => {
             if (e.key === 'Enter') { e.preventDefault(); }
         });
+
+        /* Auto-trigger search on page load if q param is present in URL */
+        if (isLibraryPage() && lastQuery.length > 0) {
+            doSearch(lastQuery);
+        }
     }
+})();
+</script>
+
+<script>
+/* ── SPA ROUTER ──────────────────────────────────────────── */
+(function () {
+    const mainView = document.getElementById('main-view');
+    if (!mainView) return;
+
+    /* Selectors of links that should use SPA navigation */
+    const NAV_SELECTOR = '.sidebar-link, .sidebar-playlist-item, [data-spa-link]';
+
+    /* Pages that have page-specific <script> blocks we need to re-run */
+    function runInlineScripts(container) {
+        container.querySelectorAll('script').forEach(oldScript => {
+            const newScript = document.createElement('script');
+            if (oldScript.src) {
+                newScript.src = oldScript.src;
+                newScript.async = false;
+            } else {
+                newScript.textContent = oldScript.textContent;
+            }
+            oldScript.parentNode.replaceChild(newScript, oldScript);
+        });
+    }
+
+    /* Update sidebar active state */
+    function updateSidebarActive(url) {
+        const path = new URL(url, location.origin).pathname;
+        document.querySelectorAll('.sidebar-link').forEach(a => {
+            const href = a.getAttribute('href');
+            const isActive = href && (path === href || (path.startsWith(href) && href !== '/'));
+            a.classList.toggle('active', !!isActive);
+        });
+        document.querySelectorAll('.sidebar-playlist-item').forEach(a => {
+            const href = a.getAttribute('href');
+            a.classList.toggle('active', href && path === href);
+        });
+    }
+
+    async function navigateTo(url, pushState = true) {
+        try {
+            const resp = await fetch(url, {
+                headers: { 'X-SPA-Request': '1' }
+            });
+            if (!resp.ok) { window.location.href = url; return; }
+
+            const html = await resp.text();
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(html, 'text/html');
+
+            /* Swap main content */
+            const newMain = doc.getElementById('main-view');
+            if (!newMain) { window.location.href = url; return; }
+
+            mainView.innerHTML = newMain.innerHTML;
+            runInlineScripts(mainView);
+
+            /* Update page title */
+            const newTitle = doc.querySelector('title');
+            if (newTitle) document.title = newTitle.textContent;
+
+            /* Update search input value from URL */
+            const q = new URL(url, location.origin).searchParams.get('q') || '';
+            const searchInput = document.getElementById('live-search-input');
+            if (searchInput) searchInput.value = q;
+
+            /* Push to browser history */
+            if (pushState) history.pushState({ url }, '', url);
+
+            /* Scroll to top */
+            mainView.scrollTop = 0;
+
+            /* Update sidebar active links */
+            updateSidebarActive(url);
+
+        } catch (e) {
+            /* Fallback: normal navigation */
+            window.location.href = url;
+        }
+    }
+
+    /* Intercept clicks on nav links */
+    document.addEventListener('click', (e) => {
+        const link = e.target.closest(NAV_SELECTOR);
+        if (!link) return;
+        const href = link.getAttribute('href');
+        if (!href || href.startsWith('#') || href.startsWith('http') || e.ctrlKey || e.metaKey || e.shiftKey) return;
+        e.preventDefault();
+        navigateTo(href);
+    });
+
+    /* Handle browser back / forward */
+    window.addEventListener('popstate', (e) => {
+        const url = e.state?.url || location.href;
+        navigateTo(url, false);
+    });
+
+    /* Save initial state */
+    history.replaceState({ url: location.href }, '', location.href);
 })();
 </script>
 
