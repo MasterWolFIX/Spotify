@@ -116,11 +116,22 @@ class SongController extends AbstractController
         }
 
         if ($this->songRepository->findByFilePath($targetPath) !== null) {
+            unlink($targetPath);
             return $this->json(['error' => 'Plik o tej ścieżce już istnieje w bibliotece.'], Response::HTTP_CONFLICT);
+        }
+
+        // Check for duplicate by file content hash
+        $hash = md5_file($targetPath);
+        if ($hash !== false && $this->songRepository->findByFileHash($hash) !== null) {
+            unlink($targetPath);
+            return $this->json(['error' => 'Ten utwór już istnieje w bibliotece (identyczna zawartość).'], Response::HTTP_CONFLICT);
         }
 
         try {
             $song = $this->scanner->createSongFromFile($targetPath, null, $originalName);
+            if ($hash !== false) {
+                $song->setFileHash($hash);
+            }
             $this->em->persist($song);
             $this->em->flush();
         } catch (\Throwable $e) {

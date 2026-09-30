@@ -32,6 +32,11 @@ class SongRepository extends ServiceEntityRepository
         return $this->findOneBy(['filePath' => $filePath]);
     }
 
+    public function findByFileHash(string $hash): ?Song
+    {
+        return $this->findOneBy(['fileHash' => $hash]);
+    }
+
     public function findAllOrderedByArtist(): array
     {
         return $this->createQueryBuilder('s')

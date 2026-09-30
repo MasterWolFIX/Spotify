@@ -37,13 +37,24 @@ class MusicLibraryScanner
 
             $filePath = $file->getPathname();
 
+            // Skip if file path already known
             if ($this->songRepository->findByFilePath($filePath) !== null) {
+                $stats['skipped']++;
+                continue;
+            }
+
+            // Skip if file content already exists (duplicate by hash)
+            $hash = md5_file($filePath);
+            if ($hash !== false && $this->songRepository->findByFileHash($hash) !== null) {
                 $stats['skipped']++;
                 continue;
             }
 
             try {
                 $song = $this->createSongFromFile($filePath, $getID3);
+                if ($hash !== false) {
+                    $song->setFileHash($hash);
+                }
                 $this->em->persist($song);
                 $stats['added']++;
             } catch (\Throwable $e) {

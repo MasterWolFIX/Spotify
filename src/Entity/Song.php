@@ -31,6 +31,9 @@ class Song
     #[ORM\Column(length: 1024, unique: true)]
     private ?string $filePath = null;
 
+    #[ORM\Column(length: 32, nullable: true)]
+    private ?string $fileHash = null;
+
     #[ORM\Column(length: 100, nullable: true)]
     private ?string $genre = null;
 
@@ -73,6 +76,9 @@ class Song
 
     public function getFilePath(): ?string { return $this->filePath; }
     public function setFilePath(string $filePath): static { $this->filePath = $filePath; return $this; }
+
+    public function getFileHash(): ?string { return $this->fileHash; }
+    public function setFileHash(?string $fileHash): static { $this->fileHash = $fileHash; return $this; }
 
     public function getGenre(): ?string { return $this->genre; }
     public function setGenre(?string $genre): static { $this->genre = $genre; return $this; }
