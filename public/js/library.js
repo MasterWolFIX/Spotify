@@ -243,6 +243,7 @@ function addSongRow(song) {
         <td class="col-title">${escHtml(song.title)}</td>
         <td>${escHtml(song.artist || '')}</td>
         <td>${escHtml(song.album || '')}</td>
+        <td class="col-plays"><span class="plays-badge">${song.playCount || 0}</span></td>
         <td class="col-duration">${song.formattedDuration || '--:--'}</td>
         <td class="col-actions">
             <button class="btn btn-ghost btn-sm btn-icon btn-action" data-add-to-playlist="${song.id}" title="Dodaj do playlisty">

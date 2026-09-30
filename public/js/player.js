@@ -18,6 +18,9 @@ class MusicPlayer {
         this.gainNode = null;
         this.sourceNode = null;
 
+        this.hasRecordedPlay = false;
+        this.currentSong = null;
+
         this._bindAudioEvents();
         this._bindUIEvents();
     }
@@ -60,6 +63,8 @@ class MusicPlayer {
 
     _loadSong(song) {
         if (!song || !song.streamUrl) return;
+        this.currentSong = song;
+        this.hasRecordedPlay = false;
         this._initAudioContext();
         this.audio.src = song.streamUrl;
         this.audio.load();
@@ -224,7 +229,13 @@ class MusicPlayer {
     _bindAudioEvents() {
         this.audio.addEventListener('play', () => this._onPlayStateChange(true));
         this.audio.addEventListener('pause', () => this._onPlayStateChange(false));
-        this.audio.addEventListener('ended', () => this.next());
+        this.audio.addEventListener('ended', () => {
+            if (!this.hasRecordedPlay && this.currentSong && this.audio.currentTime > 1) {
+                this.hasRecordedPlay = true;
+                this._recordPlay(this.currentSong.id, Math.round(this.audio.duration || this.audio.currentTime));
+            }
+            this.next();
+        });
         this.audio.addEventListener('timeupdate', () => this._onTimeUpdate());
         this.audio.addEventListener('durationchange', () => this._onTimeUpdate());
         this.audio.addEventListener('error', (e) => {
@@ -249,6 +260,12 @@ class MusicPlayer {
         const duration = this.audio.duration || 0;
         const ratio = duration ? current / duration : 0;
 
+        // Register play count when track has played for at least 5 seconds
+        if (!this.hasRecordedPlay && this.currentSong && current >= 5) {
+            this.hasRecordedPlay = true;
+            this._recordPlay(this.currentSong.id, Math.round(duration || current));
+        }
+
         const fill = document.querySelector('#progress-fill');
         const thumb = document.querySelector('#progress-thumb');
         if (fill) fill.style.width = (ratio * 100) + '%';
@@ -258,6 +275,40 @@ class MusicPlayer {
         const elDuration = document.querySelector('#time-duration');
         if (elCurrent) elCurrent.textContent = this._formatTime(current);
         if (elDuration) elDuration.textContent = this._formatTime(duration);
+    }
+
+    async _recordPlay(songId, duration) {
+        try {
+            const resp = await fetch(`/songs/${songId}/play`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: JSON.stringify({ duration: duration || 0 })
+            });
+            if (!resp.ok) return;
+            const data = await resp.json();
+            if (data.success && typeof data.playCount === 'number') {
+                if (this.currentSong && this.currentSong.id === songId) {
+                    this.currentSong.playCount = data.playCount;
+                }
+                const inQueue = this.queue.find(s => s.id === songId);
+                if (inQueue) inQueue.playCount = data.playCount;
+
+                // Animate and update badge in visible tables
+                document.querySelectorAll(`[data-song-id="${songId}"] .col-plays .plays-badge`).forEach(badge => {
+                    badge.textContent = data.playCount;
+                    badge.classList.add('plays-bump');
+                    setTimeout(() => badge.classList.remove('plays-bump'), 600);
+                });
+                document.querySelectorAll(`[data-song-id="${songId}"] .col-listen-time .listen-time-text`).forEach(el => {
+                    if (data.formattedListeningTime) el.textContent = data.formattedListeningTime;
+                });
+            }
+        } catch (e) {
+            console.warn('Failed to record song play:', e);
+        }
     }
 
     _formatTime(sec) {

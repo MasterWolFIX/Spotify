@@ -63,6 +63,7 @@
                 <th>Title</th>
                 <th>Artist</th>
                 <th>Album</th>
+                <th class="col-plays">Plays</th>
                 <th class="col-duration">Time</th>
                 <th class="col-actions"></th>
             </tr>
@@ -82,6 +83,7 @@
                 <td class="col-title">{{ song.title }}</td>
                 <td>{{ song.artist ?? '—' }}</td>
                 <td>{{ song.album ?? '—' }}</td>
+                <td class="col-plays"><span class="plays-badge">{{ song.playCount }}</span></td>
                 <td class="col-duration">{{ song.getFormattedDuration() }}</td>
                 <td class="col-actions">
                     {% if is_granted('ROLE_ADMIN') or (app.user and playlist.createdBy == app.user) %}
@@ -108,6 +110,9 @@ window._songQueue = {{ playlist.playlistSongs|map(ps => {
     'title': ps.song.title,
     'artist': ps.song.artist,
     'album': ps.song.album,
+    'duration': ps.song.duration,
+    'formattedDuration': ps.song.getFormattedDuration(),
+    'playCount': ps.song.playCount,
     'streamUrl': path('app_songs_stream', {id: ps.song.id})
 })|json_encode|raw }};
 

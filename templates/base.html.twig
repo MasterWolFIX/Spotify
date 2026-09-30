@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}MusicPlayer{% endblock %}</title>
+    <link rel="icon" type="image/jpeg" href="{{ asset('favicon.jpg') }}">
+    <link rel="shortcut icon" href="{{ asset('favicon.jpg') }}">
     <link rel="stylesheet" href="{{ asset('css/app.css') }}">
     {% block stylesheets %}{% endblock %}
 </head>
@@ -28,6 +30,10 @@
             <a href="{{ path('app_playlists_index') }}" class="sidebar-link {% if app.request.get('_route') starts with 'app_playlists' %}active{% endif %}">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
                 <span>Playlists</span>
+            </a>
+            <a href="{{ path('app_stats') }}" class="sidebar-link {% if app.request.get('_route') starts with 'app_stats' %}active{% endif %}">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+                <span>Statistics</span>
             </a>
 
             {% if is_granted('ROLE_ADMIN') %}
@@ -370,6 +376,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 <td class="col-title">${escHtml(s.title)}</td>
                 <td>${escHtml(s.artist || '')}</td>
                 <td>${escHtml(s.album || '')}</td>
+                <td class="col-plays"><span class="plays-badge">${s.playCount || 0}</span></td>
                 <td class="col-duration">${dur}</td>
                 <td class="col-actions">
                     <button class="btn btn-ghost btn-sm btn-icon btn-action" data-add-to-playlist="${s.id}" title="Add to playlist">
@@ -388,6 +395,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 <thead><tr>
                     <th class="col-num">#</th>
                     <th>Title</th><th>Artist</th><th>Album</th>
+                    <th class="col-plays">Plays</th>
                     <th class="col-duration">Time</th>
                     <th class="col-actions"></th>
                 </tr></thead>
@@ -396,7 +404,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
         window._songQueue = songs.map(s => ({
             id: s.id, title: s.title, artist: s.artist, album: s.album,
-            duration: s.duration, streamUrl: s.streamUrl
+            duration: s.duration, formattedDuration: s.formattedDuration,
+            playCount: s.playCount || 0, streamUrl: s.streamUrl
         }));
         if (window.player) window.player.setQueue(window._songQueue, null);
     }

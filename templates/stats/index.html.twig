@@ -1,0 +1,253 @@
+{% extends 'base.html.twig' %}
+{% block title %}Statystyki odtwarzania — MusicPlayer{% endblock %}
+
+{% block body %}
+<div class="page-header">
+    <div>
+        <h1 class="page-title">Statystyki odtwarzania</h1>
+        <div class="page-subtitle">Analiza aktywności, czas słuchania i ranking Top 10 utworów</div>
+    </div>
+    {% if top10Songs|length > 0 and totalPlays > 0 %}
+    <div>
+        <button class="btn btn-primary" id="btn-play-top10" style="padding:10px 20px;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="white"><path d="M8 5v14l11-7L8 5z"/></svg>
+            Odtwórz Top 10
+        </button>
+    </div>
+    {% endif %}
+</div>
+
+{# ── KPI STATS CARDS ────────────────────────────────────────── #}
+<div class="stats-kpi-grid">
+    <div class="stat-card">
+        <div class="stat-card-icon">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8"/>
+            </svg>
+        </div>
+        <div class="stat-card-content">
+            <span class="stat-card-label">Łącznie odtworzeń</span>
+            <div class="stat-card-value">{{ totalPlays }}</div>
+            <div class="stat-card-meta">{{ allSongsCount }} {{ allSongsCount == 1 ? 'utwór' : (allSongsCount < 5 ? 'utwory' : 'utworów') }} w bibliotece</div>
+        </div>
+    </div>
+
+    <div class="stat-card">
+        <div class="stat-card-icon">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+            </svg>
+        </div>
+        <div class="stat-card-content">
+            <span class="stat-card-label">Łączny czas słuchania</span>
+            <div class="stat-card-value">{{ formattedTotalListeningDuration }}</div>
+            <div class="stat-card-meta">Całkowity czas odtworzonej muzyki</div>
+        </div>
+    </div>
+
+    <div class="stat-card highlight">
+        <div class="stat-card-icon highlight-icon">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+            </svg>
+        </div>
+        <div class="stat-card-content">
+            <span class="stat-card-label">Czas słuchania Top 10</span>
+            <div class="stat-card-value">{{ formattedTop10ListeningDuration }}</div>
+            <div class="stat-card-meta">{{ top10ListeningPercentage }}% całkowitego czasu słuchania</div>
+        </div>
+    </div>
+
+    <div class="stat-card">
+        <div class="stat-card-icon">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
+            </svg>
+        </div>
+        <div class="stat-card-content">
+            <span class="stat-card-label">Najpopularniejszy wykonawca</span>
+            <div class="stat-card-value stat-card-truncate">{{ topArtist ? topArtist.artist : 'Brak danych' }}</div>
+            <div class="stat-card-meta">{{ topArtist ? topArtist.totalPlays ~ ' odtworzeń (' ~ topArtist.formattedDuration ~ ')' : 'Brak odtworzeń' }}</div>
+        </div>
+    </div>
+</div>
+
+{# ── TOP 10 BREAKDOWN & SHARE ──────────────────────────────── #}
+<div class="stats-insights-card">
+    <div class="stats-insights-header">
+        <div>
+            <h2 class="stats-section-title">Udział Top 10 w odsłuchiwaniu</h2>
+            <p class="stats-section-subtitle">Ile czasu i uwagi poświęcono najpopularniejszym utworom w porównaniu z resztą biblioteki</p>
+        </div>
+        <div class="stats-insights-badges">
+            <span class="stat-pill"><strong style="color:#fff">{{ top10PlaysCount }}</strong> z {{ totalPlays }} odtworzeń ({{ top10PlaysPercentage }}%)</span>
+            <span class="stat-pill"><strong style="color:var(--accent-light)">{{ formattedTop10ListeningDuration }}</strong> z {{ formattedTotalListeningDuration }}</span>
+        </div>
+    </div>
+
+    <div class="ratio-bar-wrapper">
+        <div class="ratio-bar-track">
+            <div class="ratio-bar-fill" style="width: {{ top10ListeningPercentage }};"></div>
+        </div>
+        <div class="ratio-bar-labels">
+            <span>Top 10 utworów: <strong style="color:var(--accent-light)">{{ top10ListeningPercentage }}%</strong> czasu</span>
+            <span>Pozostałe utwory: <strong style="color:var(--text-muted)">{{ (100 - top10ListeningPercentage)|round(1) }}%</strong> czasu</span>
+        </div>
+    </div>
+</div>
+
+{# ── MAIN STATS CONTENT: TOP 10 TABLE & TOP ARTISTS SIDE BY SIDE ─── #}
+<div class="stats-layout">
+    {# Left: Top 10 songs table #}
+    <div class="stats-main-col">
+        <div class="stats-panel stats-panel-stretch">
+            <div class="stats-panel-header">
+                <div>
+                    <h2 class="stats-section-title">Top 10 utworów</h2>
+                    <p class="stats-section-subtitle">Najczęściej odtwarzane utwory posortowane według liczby odtworzeń</p>
+                </div>
+            </div>
+
+            {% if top10Songs|length == 0 or totalPlays == 0 %}
+                <div style="text-align:center;padding:60px 20px;color:var(--text-muted)">
+                    <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="margin:0 auto 12px;display:block;opacity:.35">
+                        <path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>
+                    </svg>
+                    <p style="font-size:1rem;margin-bottom:6px">Brak historii odtworzeń</p>
+                    <p style="font-size:0.85rem">Włącz ulubione utwory w odtwarzaczu, aby wygenerować statystyki.</p>
+                </div>
+            {% else %}
+                {% set maxPlays = top10Songs[0].playCount > 0 ? top10Songs[0].playCount : 1 %}
+                <table class="song-table stats-table" role="grid">
+                    <thead>
+                        <tr>
+                            <th class="col-num" style="width:50px">Rank</th>
+                            <th>Tytuł</th>
+                            <th>Wykonawca</th>
+                            <th class="col-plays">Odtworzenia</th>
+                            <th class="col-listen-time">Łączny czas</th>
+                            <th class="col-duration">Długość</th>
+                            <th class="col-actions" style="width:60px"></th>
+                        </tr>
+                    </thead>
+                    <tbody id="top10-tbody">
+                        {% for song in top10Songs %}
+                        {% set barPercent = ((song.playCount / maxPlays) * 100)|round %}
+                        <tr data-song-id="{{ song.id }}" role="row" tabindex="0" title="Kliknij, aby odtworzyć">
+                            <td class="col-num">
+                                <span class="rank-badge rank-{{ loop.index }}">{{ loop.index }}</span>
+                                <svg class="playing-indicator" viewBox="0 0 24 24" fill="currentColor">
+                                    <rect x="2" y="10" width="4" height="10" rx="1"><animate attributeName="height" values="10;4;10" dur="1s" repeatCount="indefinite"/><animate attributeName="y" values="10;14;10" dur="1s" repeatCount="indefinite"/></rect>
+                                    <rect x="10" y="6" width="4" height="14" rx="1"><animate attributeName="height" values="14;6;14" dur="0.8s" repeatCount="indefinite"/><animate attributeName="y" values="6;10;6" dur="0.8s" repeatCount="indefinite"/></rect>
+                                    <rect x="18" y="8" width="4" height="12" rx="1"><animate attributeName="height" values="12;5;12" dur="1.2s" repeatCount="indefinite"/><animate attributeName="y" values="8;12;8" dur="1.2s" repeatCount="indefinite"/></rect>
+                                </svg>
+                            </td>
+                            <td class="col-title">
+                                <div style="display:flex;flex-direction:column;gap:4px;">
+                                    <span>{{ song.title }}</span>
+                                    <div class="song-play-mini-bar" title="{{ barPercent }}% odtworzeń względem lidera">
+                                        <div class="song-play-mini-fill" style="width:{{ barPercent }}%"></div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>{{ song.artist ?? '—' }}</td>
+                            <td class="col-plays">
+                                <span class="plays-badge">{{ song.playCount }}</span>
+                            </td>
+                            <td class="col-listen-time">
+                                <span class="listen-time-text">{{ song.getFormattedListeningTime() }}</span>
+                            </td>
+                            <td class="col-duration">{{ song.getFormattedDuration() }}</td>
+                            <td class="col-actions">
+                                <button class="btn btn-ghost btn-sm btn-icon btn-action" data-play-index="{{ loop.index0 }}" title="Odtwórz">
+                                    <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7L8 5z"/></svg>
+                                </button>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            {% endif %}
+        </div>
+    </div>
+
+    {# Right: Top Artists — same height as left panel #}
+    <div class="stats-side-col">
+        <div class="stats-panel stats-panel-stretch">
+            <div class="stats-panel-header">
+                <div>
+                    <h2 class="stats-section-title" style="font-size:1.1rem">Top Wykonawcy</h2>
+                    <p class="stats-section-subtitle">Najczęściej odtwarzani artyści</p>
+                </div>
+            </div>
+
+            {% if topArtists|length == 0 or totalPlays == 0 %}
+                <div style="text-align:center;padding:30px 10px;color:var(--text-muted);font-size:0.85rem">
+                    Brak danych o wykonawcach
+                </div>
+            {% else %}
+                {% set maxArtistPlays = topArtists[0].totalPlays > 0 ? topArtists[0].totalPlays : 1 %}
+                <div class="artist-rank-list">
+                    {% for artist in topArtists %}
+                    {% set artistBarPercent = ((artist.totalPlays / maxArtistPlays) * 100)|round %}
+                    <div class="artist-rank-item">
+                        <div class="artist-rank-num">
+                            {% if loop.index == 1 %}
+                                <span class="rank-badge rank-1">1</span>
+                            {% elseif loop.index == 2 %}
+                                <span class="rank-badge rank-2">2</span>
+                            {% elseif loop.index == 3 %}
+                                <span class="rank-badge rank-3">3</span>
+                            {% else %}
+                                <span class="rank-badge">{{ loop.index }}</span>
+                            {% endif %}
+                        </div>
+                        <div class="artist-rank-info">
+                            <div class="artist-rank-name">{{ artist.artist }}</div>
+                            <div class="artist-rank-meta">{{ artist.songCount }} {{ artist.songCount == 1 ? 'utwór' : (artist.songCount < 5 ? 'utwory' : 'utworów') }} &bull; {{ artist.formattedDuration }}</div>
+                            <div class="song-play-mini-bar" style="margin-top:5px;" title="{{ artistBarPercent }}% odtworzeń względem lidera">
+                                <div class="song-play-mini-fill" style="width:{{ artistBarPercent }}%;background:var(--accent-light);"></div>
+                            </div>
+                        </div>
+                        <div class="artist-rank-plays">
+                            <span class="plays-badge">{{ artist.totalPlays }}</span>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<script>
+window._songQueue = {{ top10Songs|map(s => {
+    'id': s.id,
+    'title': s.title,
+    'artist': s.artist,
+    'album': s.album,
+    'duration': s.duration,
+    'formattedDuration': s.getFormattedDuration(),
+    'playCount': s.playCount,
+    'streamUrl': path('app_songs_stream', {id: s.id})
+})|json_encode|raw }};
+
+document.querySelector('#btn-play-top10')?.addEventListener('click', () => {
+    if (window._songQueue && window._songQueue.length) {
+        window.player.setQueue(window._songQueue, 0);
+    }
+});
+
+document.addEventListener('click', (e) => {
+    const playBtn = e.target.closest('[data-play-index]');
+    if (playBtn) {
+        e.preventDefault();
+        e.stopPropagation();
+        const idx = parseInt(playBtn.dataset.playIndex);
+        if (window._songQueue && window._songQueue[idx]) {
+            window.player.setQueue(window._songQueue, idx);
+        }
+    }
+});
+</script>
+{% endblock %}

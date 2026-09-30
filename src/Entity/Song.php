@@ -40,13 +40,21 @@ class Song
     #[ORM\Column]
     private ?\DateTimeImmutable $createdAt = null;
 
+    #[ORM\Column(options: ['default' => 0])]
+    private int $playCount = 0;
+
     #[ORM\OneToMany(targetEntity: PlaylistSong::class, mappedBy: 'song', cascade: ['remove'])]
     private Collection $playlistSongs;
+
+    #[ORM\OneToMany(targetEntity: SongPlay::class, mappedBy: 'song', cascade: ['remove'])]
+    private Collection $songPlays;
 
     public function __construct()
     {
         $this->createdAt = new \DateTimeImmutable();
         $this->playlistSongs = new ArrayCollection();
+        $this->songPlays = new ArrayCollection();
+        $this->playCount = 0;
     }
 
     public function getId(): ?int { return $this->id; }
@@ -75,6 +83,37 @@ class Song
     public function getCreatedAt(): ?\DateTimeImmutable { return $this->createdAt; }
 
     public function getPlaylistSongs(): Collection { return $this->playlistSongs; }
+
+    public function getSongPlays(): Collection { return $this->songPlays; }
+
+    public function getPlayCount(): int { return $this->playCount; }
+    public function setPlayCount(int $playCount): static { $this->playCount = $playCount; return $this; }
+    public function incrementPlayCount(): static { $this->playCount++; return $this; }
+
+    public function getTotalListeningDuration(): int
+    {
+        return ($this->duration ?? 0) * $this->playCount;
+    }
+
+    public function getFormattedListeningTime(): string
+    {
+        $totalSeconds = $this->getTotalListeningDuration();
+        if ($totalSeconds <= 0) {
+            return '0 min';
+        }
+
+        $hours = intdiv($totalSeconds, 3600);
+        $minutes = intdiv($totalSeconds % 3600, 60);
+        $seconds = $totalSeconds % 60;
+
+        if ($hours > 0) {
+            return sprintf('%d h %d min', $hours, $minutes);
+        }
+        if ($minutes > 0) {
+            return sprintf('%d min %d s', $minutes, $seconds);
+        }
+        return sprintf('%d s', $seconds);
+    }
 
     public function getFormattedDuration(): string
     {

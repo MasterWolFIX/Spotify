@@ -3,6 +3,8 @@
 namespace App\Controller;
 
 use App\Entity\Song;
+use App\Entity\SongPlay;
+use App\Entity\User;
 use App\Repository\SongRepository;
 use App\Service\MusicLibraryScanner;
 use Doctrine\ORM\EntityManagerInterface;
@@ -153,6 +155,33 @@ class SongController extends AbstractController
         return $this->json(['success' => true]);
     }
 
+    #[Route('/{id}/play', name: 'app_songs_record_play', methods: ['POST'], requirements: ['id' => '\d+'])]
+    public function recordPlay(Song $song, Request $request): JsonResponse
+    {
+        $data = json_decode($request->getContent(), true) ?? [];
+        $duration = isset($data['duration']) ? (int) $data['duration'] : ($song->getDuration() ?? 0);
+
+        $song->incrementPlayCount();
+
+        $songPlay = new SongPlay();
+        $songPlay->setSong($song);
+        $user = $this->getUser();
+        if ($user instanceof User) {
+            $songPlay->setUser($user);
+        }
+        $songPlay->setDuration(max(0, $duration));
+
+        $this->em->persist($songPlay);
+        $this->em->flush();
+
+        return $this->json([
+            'success' => true,
+            'songId' => $song->getId(),
+            'playCount' => $song->getPlayCount(),
+            'formattedListeningTime' => $song->getFormattedListeningTime(),
+        ]);
+    }
+
     private function songToArray(Song $song): array
     {
         return [
@@ -164,6 +193,8 @@ class SongController extends AbstractController
             'formattedDuration' => $song->getFormattedDuration(),
             'genre' => $song->getGenre(),
             'year' => $song->getYear(),
+            'playCount' => $song->getPlayCount(),
+            'formattedListeningTime' => $song->getFormattedListeningTime(),
             'streamUrl' => $this->generateUrl('app_songs_stream', ['id' => $song->getId()]),
             'createdAt' => $song->getCreatedAt()?->format('Y-m-d'),
         ];
